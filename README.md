@@ -1,6 +1,6 @@
 # Reverse-Tunnel
 
-A multi-connection reverse tunnel solution that enables secure remote access to services behind NAT or firewalls.
+A multi-connection reverse tunnel solution with **WebUI** and **Authentication** that enables secure remote access to services behind NAT or firewalls.
 
 ## Overview
 
@@ -14,18 +14,22 @@ Reverse-Tunnel allows you to expose local services to the internet or create per
 
 ## Features
 
+- **Web UI Dashboard**: Modern React-based interface for tunnel management
+- **User Authentication**: JWT-based authentication with user registration/login
 - **Multiple Tunnel Support**: Manage multiple reverse tunnels simultaneously
-- **Secure Connections**: Encrypted communication between client and server
+- **Real-time Status**: WebSocket-based live tunnel status updates
+- **Secure Connections**: Encrypted WebSocket communication between client and server
 - **Port Forwarding**: Forward specific ports from local to remote
 - **Auto-Reconnect**: Automatic reconnection on connection loss
-- **Lightweight**: Minimal resource footprint
-- **Easy Configuration**: Simple YAML/JSON configuration files
+- **Role-based Access**: Admin and user roles with different permissions
+- **SQLite Database**: Lightweight embedded database for user and tunnel storage
+- **RESTful API**: Complete API for programmatic access
 
 ## Installation
 
 ### Prerequisites
 
-- Node.js (v14 or higher) / Python 3.8+ / Go 1.18+ (depending on implementation)
+- Node.js 18+ and npm
 - Network connectivity between client and server
 
 ### Quick Start
@@ -35,91 +39,181 @@ Reverse-Tunnel allows you to expose local services to the internet or create per
 git clone https://github.com/HEPHEPHEP/Reverse-Tunnel.git
 cd Reverse-Tunnel
 
-# Install dependencies
-npm install  # or pip install -r requirements.txt / go mod download
+# Install server dependencies
+cd server && npm install && cd ..
 
-# Run the server
-npm run server  # or python server.py / go run server.go
+# Install client dependencies
+cd client && npm install && cd ..
 
-# Run the client (in a separate terminal)
-npm run client  # or python client.py / go run client.go
+# Install web UI dependencies
+cd web && npm install && cd ..
+
+# Configure environment
+cd server
+cp .env.example .env
+# Edit .env and change JWT_SECRET to a secure random string
+cd ..
+
+# Start the server
+cd server && npm run dev &
+
+# Start the web UI
+cd web && npm run dev
 ```
+
+Then open `http://localhost:3000` in your browser to access the Web UI!
 
 ## Usage
 
-### Server Setup
+### Web UI
 
-Start the reverse tunnel server:
+1. **Access the Dashboard**: Open `http://localhost:3000` in your browser
+2. **Register an Account**: Create a new user account
+3. **Login**: Use your credentials to login
+4. **Create a Tunnel**:
+   - Navigate to the "Tunnels" page
+   - Click "Create Tunnel"
+   - Fill in tunnel details (name, local port, remote port)
+   - Click "Create"
+5. **Start the Client**: Copy the client command from the Web UI
+6. **Connect**: Run the client command in your terminal
+
+### Command Line
+
+#### Server
+
+The server runs both the API and WebSocket tunnel server:
 
 ```bash
-./reverse-tunnel server --port 8080 --bind 0.0.0.0
+cd server
+npm run dev  # Development mode
+npm run build && npm start  # Production mode
 ```
 
-### Client Setup
+#### Client
 
 Connect a client to expose local services:
 
 ```bash
-./reverse-tunnel client --server example.com:8080 --local 3000 --remote 80
+cd client
+npm run dev -- -s ws://localhost:8080/tunnel -t TUNNEL_ID -u USER_ID -l 3000
 ```
 
-This will expose your local service running on port 3000 to port 80 on the server.
+Or use the command copied from the Web UI's "Copy Command" button.
 
 ## Configuration
 
-Create a `config.yaml` file:
+### Server Configuration
 
-```yaml
-server:
-  port: 8080
-  bind: "0.0.0.0"
-  max_connections: 100
+Create a `.env` file in the `server` directory:
 
-client:
-  server_url: "example.com:8080"
-  tunnels:
-    - local_port: 3000
-      remote_port: 80
-      protocol: tcp
-    - local_port: 5432
-      remote_port: 5432
-      protocol: tcp
+```env
+PORT=8080
+WEB_PORT=3000
+JWT_SECRET=your-super-secret-jwt-key-change-this
+DATABASE_PATH=./tunnel.db
+NODE_ENV=development
+```
+
+### Web UI Configuration
+
+The Web UI automatically proxies API requests to the server. Configure in `web/vite.config.ts`:
+
+```typescript
+export default defineConfig({
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
+})
 ```
 
 ## Architecture
 
 ```
-[Local Service] <--> [Client] <--> [Internet] <--> [Server] <--> [End User]
-    :3000              Tunnel        Encrypted       :80
+                                  ┌─────────────────┐
+                                  │   Web Browser   │
+                                  │   (React UI)    │
+                                  └────────┬────────┘
+                                           │ HTTP/HTTPS
+                                           ▼
+┌──────────────┐   WebSocket    ┌─────────────────┐
+│ Tunnel Client├───────────────►│  Server (Node)  │
+│  (Your PC)   │   Encrypted    │  - REST API     │
+└──────┬───────┘                │  - WebSocket    │
+       │                        │  - Auth (JWT)   │
+       │                        │  - SQLite DB    │
+       ▼                        └─────────────────┘
+┌──────────────┐
+│Local Service │
+│   :3000      │
+└──────────────┘
+
+Flow:
+1. User manages tunnels via Web UI
+2. Client connects to server via WebSocket
+3. Server forwards traffic to client
+4. Client forwards to local service
 ```
 
 ## Security Considerations
 
-- Always use TLS/SSL for production deployments
-- Implement authentication mechanisms
-- Limit exposed ports to only what's necessary
-- Monitor connection logs for suspicious activity
-- Use firewall rules to restrict access
+- **Authentication**: Built-in JWT-based authentication system
+- **Password Hashing**: Bcrypt for secure password storage
+- **TLS/SSL**: Always use HTTPS/WSS in production
+- **JWT Secret**: Change the default JWT_SECRET to a strong random string
+- **Database Security**: SQLite with proper file permissions
+- **Port Restrictions**: Limit exposed ports to only what's necessary
+- **Access Control**: Role-based access (admin/user)
+- **Input Validation**: All API inputs are validated
+- **CORS**: Configure CORS for production deployments
 
 ## Examples
 
-### Expose a Local Web Server
+### Example 1: Expose a Local Web Server
 
+1. Create a tunnel via Web UI:
+   - Name: "My Web App"
+   - Local Port: 3000
+   - Remote Port: 8000
+   - Protocol: TCP
+
+2. Start the client:
 ```bash
-# Server
-./reverse-tunnel server -p 8080
-
-# Client
-./reverse-tunnel client -s server.com:8080 -l 8000 -r 80
+cd client
+npm run dev -- -s ws://localhost:8080/tunnel -t <TUNNEL_ID> -u <USER_ID> -l 3000
 ```
 
-### Multiple Tunnels
+3. Access your service at `http://your-server:8000`
+
+### Example 2: Database Tunnel
+
+1. Create tunnel for PostgreSQL:
+   - Name: "PostgreSQL"
+   - Local Port: 5432
+   - Remote Port: 5432
+   - Protocol: TCP
+
+2. Connect remotely to your database through the tunnel
+
+### Example 3: Multiple Services
+
+Create multiple tunnels in the Web UI and run separate client instances for each:
 
 ```bash
-./reverse-tunnel client -s server.com:8080 \
-  -l 3000 -r 80 \
-  -l 5432 -r 5432 \
-  -l 6379 -r 6379
+# Terminal 1: Web app
+npm run dev -- -s ws://server:8080/tunnel -t TUNNEL_ID_1 -u USER_ID -l 3000
+
+# Terminal 2: API
+npm run dev -- -s ws://server:8080/tunnel -t TUNNEL_ID_2 -u USER_ID -l 4000
+
+# Terminal 3: Database
+npm run dev -- -s ws://server:8080/tunnel -t TUNNEL_ID_3 -u USER_ID -l 5432
 ```
 
 ## Troubleshooting
@@ -152,13 +246,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-- [ ] Web UI for tunnel management
-- [ ] Support for UDP tunnels
-- [ ] Built-in authentication system
+- [x] Web UI for tunnel management
+- [x] Built-in authentication system
+- [x] User management dashboard
+- [x] Real-time tunnel status updates
+- [ ] Support for UDP tunnels (TCP currently implemented)
 - [ ] Bandwidth limiting and QoS
 - [ ] Docker containerization
 - [ ] Kubernetes deployment manifests
-- [ ] Metrics and monitoring dashboard
+- [ ] Advanced metrics and monitoring dashboard
+- [ ] API token management
+- [ ] Tunnel usage statistics
+- [ ] Email notifications
+- [ ] Two-factor authentication (2FA)
 
 ## Support
 

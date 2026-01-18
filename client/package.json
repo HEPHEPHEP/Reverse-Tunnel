@@ -1,0 +1,29 @@
+{
+  "name": "reverse-tunnel-client",
+  "version": "1.0.0",
+  "description": "Reverse Tunnel Client",
+  "main": "dist/index.js",
+  "bin": {
+    "tunnel-client": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["tunnel", "client"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.16.0",
+    "commander": "^12.0.0",
+    "dotenv": "^16.4.1",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3",
+    "ts-node-dev": "^2.0.0"
+  }
+}
