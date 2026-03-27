@@ -16,7 +16,21 @@ const PORT = parseInt(process.env.PORT || '8080');
 const WEB_PORT = parseInt(process.env.WEB_PORT || '3000');
 
 // Middleware
-app.use(cors());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Requests ohne Origin (z.B. curl, Server-to-Server) erlauben
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`Origin ${origin} nicht erlaubt (CORS)`));
+  },
+}));
 app.use(express.json());
 
 // Initialize database

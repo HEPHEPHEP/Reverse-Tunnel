@@ -37,12 +37,18 @@ cd server
 cp .env.example .env
 ```
 
-Edit `.env` and change the `JWT_SECRET` to a secure random string:
+Edit `.env` and set a secure `JWT_SECRET`:
+
+```bash
+# Generiere ein sicheres Secret:
+openssl rand -base64 48
+```
 
 ```env
 PORT=8080
 WEB_PORT=3000
-JWT_SECRET=change-this-to-a-secure-random-string
+JWT_SECRET=<hier den generierten Wert einfügen>
+ALLOWED_ORIGINS=http://localhost:3000
 DATABASE_PATH=./tunnel.db
 NODE_ENV=development
 ```
@@ -122,10 +128,16 @@ npm run build
 
 Update `server/.env`:
 
+```bash
+# Generiere ein sicheres Secret:
+openssl rand -base64 48
+```
+
 ```env
 PORT=8080
 WEB_PORT=3000
-JWT_SECRET=your-very-secure-random-string-here
+JWT_SECRET=<hier den generierten Wert einfügen>
+ALLOWED_ORIGINS=https://your-domain.com
 DATABASE_PATH=/var/lib/reverse-tunnel/tunnel.db
 NODE_ENV=production
 ```
@@ -206,12 +218,13 @@ CMD ["node", "server/dist/index.js"]
 ## Security Recommendations
 
 1. **Always use HTTPS in production** - Set up SSL/TLS certificates
-2. **Change the default JWT_SECRET** - Use a strong, random secret
-3. **Use strong passwords** - Enforce password complexity
-4. **Firewall rules** - Only expose necessary ports
-5. **Regular updates** - Keep dependencies up to date
-6. **Database backups** - Regularly backup your SQLite database
-7. **Rate limiting** - Implement rate limiting on API endpoints
+2. **JWT_SECRET wird beim Start validiert** - Server startet nicht ohne min. 32 Zeichen
+3. **CORS konfigurieren** - `ALLOWED_ORIGINS` in .env auf die tatsächlichen Domains setzen
+4. **Use strong passwords** - Enforce password complexity
+5. **Firewall rules** - Only expose necessary ports
+6. **Regular updates** - Keep dependencies up to date
+7. **Database backups** - Regularly backup your SQLite database
+8. **Rate limiting** - Implement rate limiting on API endpoints
 
 ## Troubleshooting
 

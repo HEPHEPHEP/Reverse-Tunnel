@@ -25,7 +25,14 @@ fi
 if [ ! -f "server/.env" ]; then
     echo "Creating .env file..."
     cp server/.env.example server/.env
-    echo "⚠️  Please edit server/.env and change JWT_SECRET!"
+    # Automatisch ein sicheres JWT_SECRET generieren
+    GENERATED_SECRET=$(openssl rand -base64 48 2>/dev/null || head -c 64 /dev/urandom | base64 | tr -d '\n' | head -c 64)
+    if [ -n "$GENERATED_SECRET" ]; then
+        sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${GENERATED_SECRET}|" server/.env
+        echo "✅ JWT_SECRET automatisch generiert"
+    else
+        echo "⚠️  Bitte manuell ein JWT_SECRET in server/.env setzen!"
+    fi
 fi
 
 echo ""
